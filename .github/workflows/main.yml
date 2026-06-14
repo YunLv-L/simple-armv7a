@@ -1,13 +1,12 @@
 name: CI
 
-# Controls when the action will run. Triggers the workflow on push or pull request
-# events but only for the master branch
 on:
   push:
     branches: [ master ]
     tags: [ '*' ]
   pull_request:
     branches: [ master ]
+  workflow_dispatch:   # 允许手动触发
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -17,7 +16,6 @@ permissions:
   contents: write
   pull-requests: write
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   Windows:
     runs-on: windows-latest
@@ -62,24 +60,17 @@ jobs:
         echo "BUILD_PRESET=$buildPreset" >> $env:GITHUB_OUTPUT
         echo "BUILD_DIR=$buildDir" >> $env:GITHUB_OUTPUT
 
-    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - uses: actions/checkout@v6
       with:
         submodules: true
 
-    # - name: Install MSVC problem matcher
-    #   uses: ammaraskar/msvc-problem-matcher@master
-
-    # Install latest CMake
     - uses: lukka/get-cmake@v4.2.0
 
-    # Restore from cache the previously built ports
     - name: Restore artifacts, or setup vcpkg
       uses: lukka/run-vcpkg@v11
       with:
         vcpkgDirectory: '${{ github.workspace }}/vcpkg'
 
-    # Add this to prevent storing partial cache in case of failure
     - run: |
         echo "RUNVCPKG_NO_CACHE=1" >> $GITHUB_ENV
       if: ${{ failure() || cancelled() }}
@@ -97,29 +88,6 @@ jobs:
       with:
         allow_failure: true
         files: "${{ steps.build_type.outputs.BUILD_DIR }}/src/${{ steps.build_type.outputs.BUILD_TYPE }}/simple.dll, ${{ steps.build_type.outputs.BUILD_DIR }}/cppjieba/src/cppjieba/dict/jieba.dict.utf8"
-
-    # can't build
-    # npm run
-    # - uses: actions/setup-node@v2
-    #   with:
-    #     node-version: '16'
-    # - name: run node example
-    #   working-directory: ./examples/node/
-    #   run: |
-    #     npm install
-    #     npm run p -- --ext_path="${{ github.workspace }}/../../_temp/windows/src/${{ steps.build_type.outputs.BUILD_TYPE }}/" --dict_path="${{ github.workspace }}/../../_temp/windows/cppjieba/src/cppjieba/dict/"
-
-    # - name: 'Run CTest'
-    #   run: ctest -C ${{ env.BUILD_TYPE }}
-    #   working-directory: "${{ github.workspace }}/../../_temp/windows"
-
-    # python run
-    # - uses: actions/setup-python@v4
-    #   with:
-    #     python-version: '3.x' # Version range or exact version of a Python version to use, using SemVer's version range syntax
-    # - name: run python example
-    #   working-directory: ./examples/python3/
-    #   run: python db_connector.py "${{ github.workspace }}/../../_temp/windows/src/${{ steps.build_type.outputs.BUILD_TYPE }}/simple"
 
     - name: Package
       if: startsWith(github.ref, 'refs/tags/')
@@ -189,7 +157,6 @@ jobs:
       run: ctest -V -C ${{ env.BUILD_TYPE }}
       working-directory: "${{ github.workspace }}/build"
 
-    # CODE COVERAGE
     - name: Code coverage - Capture coverage info
       if: ${{ startsWith(github.ref, 'refs/tags/') != true && matrix.os == 'ubuntu-latest' }}
       run: lcov --directory . --capture --output-file coverage.info --ignore-errors mismatch
@@ -214,7 +181,6 @@ jobs:
         allow_failure: true
         files: "${{ github.workspace }}/build/src/libsimple.so, ${{ github.workspace }}/build/test/dict/jieba.dict.utf8"
 
-    # npm run
     - uses: actions/setup-node@v6
       if: startsWith(github.ref, 'refs/tags/') != true
       with:
@@ -227,17 +193,15 @@ jobs:
         npm run p -- --ext_path="${{ github.workspace }}/build/src/" --dict_path="${{ github.workspace }}/build/test/dict/"
         npm run b -- --ext_path="${{ github.workspace }}/build/src/" --dict_path="${{ github.workspace }}/build/test/dict/"
 
-    # python run
     - uses: actions/setup-python@v6
       if: startsWith(github.ref, 'refs/tags/') != true
       with:
-        python-version: '3.13' # Version range or exact version of a Python version to use, using SemVer's version range syntax
+        python-version: '3.13'
     - name: run python example
       if: startsWith(github.ref, 'refs/tags/') != true
       working-directory: ./examples/python3/
       run: python db_connector.py "${{ github.workspace }}/build/src/libsimple"
 
-    # create release
     - name: "Build Changelog"
       id: build_changelog
       if: ${{ startsWith(github.ref, 'refs/tags/') && matrix.os == 'ubuntu-latest' }}
@@ -323,17 +287,14 @@ jobs:
       with:
         submodules: true
 
-    # Install build tools
     - name: Install Ninja
       run: brew install ninja
 
-    # Restore from cache the previously built ports
     - name: Restore artifacts, or setup vcpkg
       uses: lukka/run-vcpkg@v11
       with:
         vcpkgDirectory: '${{ github.workspace }}/vcpkg'
 
-    # Add this to prevent storing partial cache in case of failure
     - run: |
         echo "RUNVCPKG_NO_CACHE=1" >> $GITHUB_ENV
       if: ${{ failure() || cancelled() }}
@@ -359,25 +320,13 @@ jobs:
       with:
         node-version: '20'
     
-    # - uses: actions/setup-python@v6
-    #   with:
-    #     python-version: '3.12' # Version range or exact version of a Python version to use, using SemVer's version range syntax
-    # npm run
     - name: run node example
       working-directory: ./examples/node/
       run: |
         brew install python-setuptools
         npm install
         npm run p -- --ext_path="${{ steps.mac_build.outputs.BUILD_DIR }}/src/" --dict_path="${{ steps.mac_build.outputs.BUILD_DIR }}/test/dict/"
-        # don't run this as it's toooo slow
-        # npm run b -- --ext_path="${{ steps.mac_build.outputs.BUILD_DIR }}/src/" --dict_path="${{ steps.mac_build.outputs.BUILD_DIR }}/test/dict/"
 
-    # python run
-    # - name: run python example
-    #   working-directory: ./examples/python3/
-    #   run: |
-    #     python db_connector.py "${{ github.workspace }}/../../_temp/macos/src/libsimple"
-  
     - name: Package
       if: startsWith(github.ref, 'refs/tags/')
       run: |
@@ -423,7 +372,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        abi: [arm64-v8a, x86_64, armeabi-v7a]
+        abi: [arm64-v8a, x86_64, armeabi-v7a]   # ✅ 添加了 armeabi-v7a
     steps:
     - uses: actions/checkout@v6
       with:
@@ -466,6 +415,15 @@ jobs:
         cp -r "output-android-${{ matrix.abi }}/bin/libsimple.so" "output-android-${{ matrix.abi }}/bin/dict" "libsimple-android-${{ matrix.abi }}/"
         zip -r "libsimple-android-${{ matrix.abi }}.zip" "libsimple-android-${{ matrix.abi }}"
       working-directory: "${{ github.workspace }}"
+
+    # ✅ 新增：无条件上传 Artifact（无论是否 tag 触发）
+    - name: Upload Android artifact (unconditional)
+      uses: actions/upload-artifact@v4
+      with:
+        name: libsimple-android-${{ matrix.abi }}
+        path: |
+          output-android-${{ matrix.abi }}/bin/libsimple.so
+          output-android-${{ matrix.abi }}/bin/dict/
 
     - name: Release Android
       if: startsWith(github.ref, 'refs/tags/')
@@ -515,7 +473,6 @@ jobs:
             exit 1
           fi
 
-          # Fast path: native build only needs Linux native/toolchains SDK packages.
           mapfile -t preferred_zips < <(printf '%s\n' "${zips[@]}" | grep -E '/linux/(native|toolchains)-linux-x64-.*\.zip$' || true)
           if [ "${#preferred_zips[@]}" -gt 0 ]; then
             for f in "${preferred_zips[@]}"; do unzip -q -o "${f}" -d "$(dirname "${f}")"; done

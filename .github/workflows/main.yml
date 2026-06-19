@@ -372,7 +372,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        abi: [arm64-v8a, x86_64, armeabi-v7a]   # ✅ 添加了 armeabi-v7a
+        abi: [arm64-v8a, x86_64, armeabi-v7a, x86]
     steps:
     - uses: actions/checkout@v6
       with:

@@ -76,6 +76,10 @@ jobs:
       if: ${{ failure() || cancelled() }}
       shell: bash
 
+    - name: Install vcpkg dependencies manually
+      run: vcpkg install
+      working-directory: ${{ github.workspace }}/vcpkg
+
     - name: 'Run CMake'
       uses: lukka/run-cmake@v10
       continue-on-error: false

@@ -65,16 +65,6 @@ jobs:
 
     - uses: lukka/get-cmake@v4.2.0
 
-    - name: Restore artifacts, or setup vcpkg
-      uses: lukka/run-vcpkg@v11
-      with:
-        vcpkgDirectory: '${{ github.workspace }}/vcpkg'
-
-    - run: |
-        echo "RUNVCPKG_NO_CACHE=1" >> $env:GITHUB_ENV
-      if: ${{ failure() || cancelled() }}
-      shell: pwsh
-
     - name: 'Run CMake'
       uses: lukka/run-cmake@v10
       continue-on-error: false
@@ -130,26 +120,16 @@ jobs:
         sudo apt-get install -y build-essential
         sudo apt-get install -y gcc g++
 
-    - name: Restore artifacts, or setup vcpkg
-      uses: lukka/run-vcpkg@v11
-      with:
-        vcpkgDirectory: '${{ github.workspace }}/vcpkg'
-
     - name: Install lcov
       if: startsWith(github.ref, 'refs/tags/') != true
       run: sudo apt-get install lcov
-
-    - run: |
-        echo "RUNVCPKG_NO_CACHE=1" >> $GITHUB_ENV
-      if: ${{ failure() || cancelled() }}
-      shell: bash
 
     - name: 'Run CMake'
       uses: lukka/run-cmake@v10
       continue-on-error: false
       with:
-        configurePreset: ${{ startsWith(github.ref, 'refs/tags/') && 'ninja-vcpkg-release' || 'ninja-vcpkg-coverage' }}
-        buildPreset: ${{ startsWith(github.ref, 'refs/tags/') && 'ninja-vcpkg-release' || 'ninja-vcpkg-coverage' }}
+        configurePreset: ${{ startsWith(github.ref, 'refs/tags/') && 'ninja-default' || 'ninja-default' }}
+        buildPreset: ${{ startsWith(github.ref, 'refs/tags/') && 'ninja-default' || 'ninja-default' }}
 
     - name: 'Run CTest'
       if: ${{ startsWith(github.ref, 'refs/tags/') != true && matrix.os == 'ubuntu-latest' }}
@@ -287,16 +267,6 @@ jobs:
 
     - name: Install Ninja
       run: brew install ninja
-
-    - name: Restore artifacts, or setup vcpkg
-      uses: lukka/run-vcpkg@v11
-      with:
-        vcpkgDirectory: '${{ github.workspace }}/vcpkg'
-
-    - run: |
-        echo "RUNVCPKG_NO_CACHE=1" >> $GITHUB_ENV
-      if: ${{ failure() || cancelled() }}
-      shell: bash
 
     - name: 'Run CMake'
       uses: lukka/run-cmake@v10
